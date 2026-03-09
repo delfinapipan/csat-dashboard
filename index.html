@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard CSAT - Humand</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f0f12;
+      --card: #1a1a1f;
+      --border: #2a2a32;
+      --text: #e8e8ec;
+      --text-muted: #8b8b98;
+      --accent: #6366f1;
+      --green: #22c55e;
+      --red: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem;
+      line-height: 1.5;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header-row { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.5rem; }
+    h1 { font-size: 1.75rem; font-weight: 700; }
+    .subtitle { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1rem; }
+    .btn-refresh {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-refresh:hover { opacity: 0.9; }
+    .btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
+    .badge { font-size: 0.75rem; color: var(--text-muted); background: var(--border); padding: 0.2rem 0.5rem; border-radius: 4px; }
+    .loading, .error { text-align: center; padding: 3rem; color: var(--text-muted); }
+    .error { color: var(--red); }
+    .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 2rem; }
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+    }
+    .kpi-card h3 { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .kpi-card .value { font-size: 1.35rem; font-weight: 700; color: var(--green); }
+    .kpi-card .meta { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .charts-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 2rem; }
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .chart-card h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 1rem; }
+    .chart-wrap { position: relative; height: 220px; }
+    .insights { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; }
+    .insights h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .insights h2::before { content: ''; width: 4px; height: 1.2em; background: var(--accent); border-radius: 2px; }
+    .insight-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+    .insight-block h4 { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.5rem; }
+    .insight-block ul { list-style: none; font-size: 0.9rem; }
+    .insight-block li { padding: 0.35rem 0; padding-left: 1rem; position: relative; }
+    .insight-block li::before { content: '•'; position: absolute; left: 0; color: var(--accent); }
+    .insight-block li.positive::before { color: var(--green); }
+    .insight-block li.negative::before { color: var(--red); }
+    .plataforma-pm {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .plataforma-pm h2 { font-size: 1.1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .plataforma-pm h2::before { content: ''; width: 4px; height: 1.2em; background: var(--accent); border-radius: 2px; }
+    .plataforma-pm h3 { font-size: 0.9rem; color: var(--text-muted); margin: 1rem 0 0.5rem; }
+    .plataforma-pm h3:first-of-type { margin-top: 0; }
+    .plataforma-pm ul { margin-left: 1rem; font-size: 0.9rem; }
+    .plataforma-pm li { margin: 0.35rem 0; }
+    .plataforma-pm .sub { margin-left: 1rem; margin-top: 0.2rem; color: var(--text-muted); font-size: 0.85rem; }
+    .context-block {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .context-block h2 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--text); }
+    .context-block p { font-size: 0.9rem; color: var(--text-muted); margin: 0.5rem 0; line-height: 1.5; }
+    .context-block ul { margin: 0.5rem 0 0 1.25rem; font-size: 0.9rem; color: var(--text-muted); }
+    .context-block li { margin: 0.25rem 0; }
+    .footer { text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 1rem; }
+    .tabs { display: flex; gap: 0.25rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+    .tab-btn { background: none; border: none; color: var(--text-muted); font-family: inherit; font-size: 0.95rem; padding: 0.6rem 1rem; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .iframe-fallback { color: var(--text-muted); font-size: 0.9rem; }
+    .btn-redash { display: inline-block; background: var(--accent); color: white; text-decoration: none; padding: 0.75rem 1.5rem; border-radius: 10px; font-weight: 500; font-size: 1rem; }
+    .btn-redash:hover { opacity: 0.9; }
+    .eje-cx { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .eje-cx h2 { font-size: 1.05rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .eje-cx h2::before { content: ''; width: 4px; height: 1.1em; background: var(--accent); border-radius: 2px; }
+    .eje-cx h3 { font-size: 0.9rem; color: var(--text-muted); margin: 1rem 0 0.5rem; }
+    .eje-cx h3:first-of-type { margin-top: 0; }
+    .eje-cx ul { margin-left: 1rem; font-size: 0.9rem; }
+    .eje-cx li { margin: 0.35rem 0; }
+    .eje-cx .chart-wrap { height: 200px; margin-bottom: 1rem; }
+    @media (max-width: 900px) {
+      .kpi-row, .charts-row { grid-template-columns: 1fr; }
+      .insight-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-row">
+      <div>
+        <h1>Dashboard CSAT – Humand</h1>
+        <p class="subtitle" id="subtitle">Cargando datos desde Redash…</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span class="badge" id="sourceBadge">Redash query 31942</span>
+        <button type="button" class="btn-refresh" id="btnRefresh" onclick="loadData()">Actualizar datos</button>
+      </div>
+    </div>
+
+    <div class="context-block">
+      <h2>Contexto del CSAT</h2>
+      <p>Este CSAT se envió en Humand a <strong>usuarios administradores</strong> de ciertas instancias. Las respuestas reflejan la satisfacción con tres ejes del servicio y producto.</p>
+      <p><strong>Las 3 preguntas del CSAT:</strong></p>
+      <ul>
+        <li><strong>Onboarding y Success</strong> — Servicio de onboarding y success</li>
+        <li><strong>Soporte</strong> — Servicio de soporte</li>
+        <li><strong>Plataforma</strong> — La plataforma Humand</li>
+      </ul>
+    </div>
+
+    <div id="loading" class="loading">Obteniendo datos de Redash…</div>
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="content" style="display: none;">
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab-btn active" data-tab="generales" role="tab">Métricas generales</button>
+        <button type="button" class="tab-btn" data-tab="pms" role="tab">Métricas PMs</button>
+        <button type="button" class="tab-btn" data-tab="cx" role="tab">Métricas CX</button>
+      </div>
+
+      <div id="panel-generales" class="tab-panel active" role="tabpanel">
+        <p class="iframe-fallback" style="margin-bottom:1rem;">Métricas generales del CSAT en Redash.</p>
+        <a href="https://redash.humand.co/dashboards/2482-csat-2026?p_Segmento=%5B%22Mid-Market%22%5D&p_instance_id=13178&p_w25544_feedback_status=NPS_SUBMITTED&p_w25646_feedback_status=NPS_SUBMITTED" target="_blank" rel="noopener" class="btn-redash">Abrir dashboard en Redash</a>
+      </div>
+
+      <div id="panel-pms" class="tab-panel" role="tabpanel">
+        <div class="kpi-row" id="kpiRow"></div>
+        <div class="charts-row">
+          <div class="chart-card"><h3>Onboarding y Success</h3><div class="chart-wrap"><canvas id="chartOb"></canvas></div></div>
+          <div class="chart-card"><h3>Soporte</h3><div class="chart-wrap"><canvas id="chartSoporte"></canvas></div></div>
+          <div class="chart-card"><h3>Plataforma</h3><div class="chart-wrap"><canvas id="chartPlataforma"></canvas></div></div>
+        </div>
+        <div class="insights" id="insightsBlock"></div>
+        <div class="plataforma-pm">
+        <h2>Plataforma – Para Product</h2>
+
+        <h3>Lo que valoran</h3>
+        <ul>
+          <li>Comunicación interna, formularios digitales y gestión con Capital Humano</li>
+          <li>Interfaz amigable e intuitiva (usuario y admin)</li>
+          <li>Automatización de procesos que antes eran manuales</li>
+          <li>Uso en capacitación y evidencias de cursos</li>
+        </ul>
+
+        <h3>Solicitudes de mejora</h3>
+        <ul>
+          <li><strong>Desempeño:</strong> poder abrir y modificar evaluaciones una vez iniciado o finalizado el proceso</li>
+          <li><strong>Legajos:</strong> implementación; vincular onboarding con legajo por colaborador</li>
+          <li><strong>Calendario:</strong> licencias y vacaciones visibles para toda la nómina (hoy solo admin)</li>
+          <li><strong>Nómina:</strong> liberar módulo para México</li>
+          <li><strong>Roles y perfiles:</strong> copiar roles o perfiles de forma sencilla</li>
+          <li><strong>Tableros:</strong> avance de cursos; tickets con mejor visibilidad y filtros</li>
+          <li><strong>Datos personales:</strong> registro obligatorio desde el inicio por colaborador</li>
+          <li><strong>Aprendizaje:</strong> mejor interfaz; más permisos y roles configurables; menos procesos manuales</li>
+          <li><strong>LFT México:</strong> app alineada a cambios normativos como diferenciador</li>
+          <li><strong>Groups/Feeds:</strong> más analytics y opciones</li>
+          <li><strong>Cursos:</strong> listado por persona (nombre/DPI) con filtro de pendientes y avance</li>
+        </ul>
+
+        <h3>Problemas reportados</h3>
+        <ul>
+          <li>App lenta; caídas sin notificaciones; bugs en modo administrador</li>
+          <li>En cada actualización pide contraseña de nuevo</li>
+          <li>Segmentación: desconfianza en los datos; información inconsistente (ej. vacaciones)</li>
+          <li>Chats y tickets: distintas opciones de edición; falta búsqueda en historial</li>
+          <li>Knowledge Library: subartículos difíciles de crear</li>
+          <li>Subir muchas fotos a la vez falla en varios navegadores</li>
+          <li>Customización limitada; tiempos de solución largos</li>
+          <li>Tablet y velocidad general a mejorar</li>
+        </ul>
+
+        <h3>Otro comentario recurrente</h3>
+        <ul>
+          <li>La plataforma se percibe más como comunicación y formación que como gestión integral de personal; falta cubrir necesidades administrativas básicas para algunos clientes.</li>
+        </ul>
+        </div>
+      </div>
+
+      <div id="panel-cx" class="tab-panel" role="tabpanel">
+        <div class="eje-cx">
+          <h2>Success y Onboarding</h2>
+          <div class="chart-wrap"><canvas id="chartObCX"></canvas></div>
+          <h3>Lo que valoran</h3>
+          <ul>
+            <li>Equipo muy valorado: nombres concretos (Lu, Mayra, Adri, Danielle, Fede, Laura, Mateo, Felicitas) y trato “siempre disponibles”, “muy atentos”, “excelente disposición”</li>
+            <li>Llamadas de seguimiento que ayudan a avanzar y aclarar dudas en la implementación</li>
+            <li>Información de últimas actualizaciones y posibles escenarios; acompañamiento en proyectos</li>
+            <li>Respuesta rápida a consultas; predisposición y amabilidad; conocimiento técnico que no deja dudas</li>
+          </ul>
+          <h3>Temas a mejorar</h3>
+          <ul>
+            <li>Demoras: “las respuestas se demoran”, “tardan en dar respuesta a problemas técnicos”, “tiempo de respuesta lento”</li>
+            <li>Falta de avance en necesidades específicas; “no hay un avance”; “no se da solución y ya ha pasado mucho tiempo”</li>
+            <li>Llamadas semanales que pasaron a “a requerimiento” “perdiéndose un poco el pulso de la actividad”</li>
+            <li>Falta de seguimiento: “no cuento con ese seguimiento”, “falta de seguimiento”, “no he participado en ello”</li>
+            <li>Videollamadas: algunos no tienen o no fueron incorporados; reuniones canceladas en ocasiones</li>
+            <li>Mayor atención semanal o más herramientas antes de valorar el servicio</li>
+          </ul>
+        </div>
+        <div class="eje-cx">
+          <h2>Soporte</h2>
+          <div class="chart-wrap"><canvas id="chartSoporteCX"></canvas></div>
+          <h3>Lo que valoran</h3>
+          <ul>
+            <li>Rapidez: “resuelven rápidamente”, “respuesta inmediata”, “responden súper rápido”, “devolución de forma temprana”</li>
+            <li>Buena actitud y comunicación; “siempre tienen la mejor actitud”; “hay información importante y se contestan las dudas”</li>
+            <li>Cuando hay respuesta, resuelven y dan seguimiento; “logran solventar cuando se presentan inconvenientes”</li>
+            <li>Contacto de cuenta valorado (aunque a veces el equipo técnico no responde igual)</li>
+          </ul>
+          <h3>Temas a mejorar</h3>
+          <ul>
+            <li>Tiempos: “tiempo de respuesta lento”, “a veces no contestan”, “pasan meses y no pasa nada” en temas técnicos</li>
+            <li>Falta de cierre: “logran solucionar pero no avisan cuándo ni por qué del hallazgo”; “algunas veces no vuelven a uno para dar el feedback”</li>
+            <li>Mensajes genéricos en el grupo; “arroban a alguien más para que nos den respuesta”; poca sensación de urgencia en temas críticos</li>
+            <li>Equipo técnico: “en soporte técnico” Equipo técnico: “no hay respuesta de equipo técnico, no contestan mensajes”; “solo dicen que lo están viendo en soporte técnico”</li>
+            <li>Grupos: “no me incorporaron al grupo de WhatsApp”, “no estoy en ningún grupo”, “no tengo esta opción”</li>
+            <li>Prioridad: “no siempre percibimos el nivel de urgencia esperado”; respuestas que requieren aprobación para temas críticos</li>
+          </ul>
+        </div>
+        <div class="eje-cx">
+          <h2>Plataforma</h2>
+          <div class="chart-wrap"><canvas id="chartPlataformaCX"></canvas></div>
+          <h3>Lo que valoran</h3>
+          <ul>
+            <li>Comunicación interna, formularios digitales y gestión con Capital Humano; “la comunicación con el depto de CH es rápida y eficaz”</li>
+            <li>Interfaz amigable e intuitiva para usuario y administrador; “bastante amigable, intuitiva para su manejo”</li>
+            <li>Automatización: “nos profesionalizó y automatizó en muchas prácticas que realizábamos de manera informal y manual”</li>
+            <li>Capacitación: “da todo lo necesario para evidenciar los cursos”; “variedad de opciones que complementan y facilitan el trabajo”</li>
+          </ul>
+          <h3>Solicitudes de mejora</h3>
+          <ul>
+            <li><strong>Desempeño:</strong> poder abrir y modificar evaluaciones una vez iniciado o finalizado el proceso</li>
+            <li><strong>Legajos:</strong> implementación urgente; vincular tareas de onboarding con el legajo por colaborador</li>
+            <li><strong>Calendario:</strong> licencias y vacaciones visibles para toda la nómina (hoy solo admin)</li>
+            <li><strong>Nómina:</strong> liberar módulo para México</li>
+            <li><strong>Roles y perfiles:</strong> copiar roles o perfiles de forma sencilla</li>
+            <li><strong>Tableros:</strong> avance de cursos; tickets con mejor visibilidad y filtros</li>
+            <li><strong>Datos personales:</strong> registro obligatorio desde el inicio por colaborador</li>
+            <li><strong>Aprendizaje:</strong> mejor interfaz; más permisos y roles; menos procesos manuales; LFT México alineada</li>
+          </ul>
+          <h3>Problemas reportados</h3>
+          <ul>
+            <li>App lenta; caídas sin notificaciones; bugs en modo administrador</li>
+            <li>En cada actualización pide contraseña de nuevo; genera molestias</li>
+            <li>Segmentación: desconfianza en los datos; información inconsistente (ej. vacaciones)</li>
+            <li>Chats y tickets: distintas opciones de edición; falta búsqueda en historial; “pata fundamental en nuestra compañía”</li>
+            <li>Knowledge Library: subartículos difíciles de crear; subir muchas fotos a la vez falla en varios navegadores</li>
+            <li>Customización limitada; “cada solución lleva más tiempo del deseado y no se puede customizar”</li>
+            <li>Tablet y velocidad general a mejorar</li>
+          </ul>
+          <h3>Otro comentario recurrente</h3>
+          <ul>
+            <li>La plataforma se percibe más como comunicación y formación que como gestión integral de personal; falta cubrir necesidades administrativas básicas para algunos clientes.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <p class="footer">CSAT Humand · Datos en vivo desde <a href="https://redash.humand.co/queries/31942?p_feedback_status=NPS_SUBMITTED" target="_blank" rel="noopener" style="color: var(--accent);">Redash query 31942</a></p>
+  </div>
+
+  <script>
+    const RATING_ORDER = ['Totalmente satisfecho', 'Muy satisfecho', 'Satisfecho', 'Un poco satisfecho', 'Nada satisfecho'];
+    const PALETTE = ['#22c55e', '#4ade80', '#a3e635', '#eab308', '#ef4444'];
+    const COL = {
+      ratingOb: 'Rating OB/SU',
+      ratingSoporte: 'Rating Soporte',
+      ratingPlataforma: 'Rating Plataforma',
+      commentOb: 'Comment OB/SU',
+      commentSoporte: 'Comment Soporte',
+      commentPlataforma: 'Comment Plataforma',
+    };
+    let chartOb, chartSoporte, chartPlataforma;
+    let chartObCX, chartSoporteCX, chartPlataformaCX;
+
+    function countRatings(rows, colKey) {
+      const col = COL[colKey];
+      const count = {};
+      RATING_ORDER.forEach(r => count[r] = 0);
+      rows.forEach(r => {
+        const v = (r[col] || '').trim();
+        if (v && count.hasOwnProperty(v)) count[v]++;
+      });
+      return count;
+    }
+
+    function predominant(counts) {
+      let max = 0, label = '';
+      RATING_ORDER.forEach(r => {
+        if (counts[r] > max) { max = counts[r]; label = r; }
+      });
+      const total = RATING_ORDER.reduce((s, r) => s + counts[r], 0);
+      const pct = total ? ((max / total) * 100).toFixed(1) : '0';
+      return { label, count: max, total, pct };
+    }
+
+    function countComments(rows, colKey) {
+      const col = COL[colKey];
+      return rows.filter(r => {
+        const v = (r[col] || '').trim();
+        return v && v.length > 2;
+      }).length;
+    }
+
+    function buildStats(rows) {
+      const ob = countRatings(rows, 'ratingOb');
+      const soporte = countRatings(rows, 'ratingSoporte');
+      const plataforma = countRatings(rows, 'ratingPlataforma');
+      return {
+        n: rows.length,
+        ob: { counts: ob, pred: predominant(ob) },
+        soporte: { counts: soporte, pred: predominant(soporte) },
+        plataforma: { counts: plataforma, pred: predominant(plataforma) },
+        commentsOb: countComments(rows, 'commentOb'),
+        commentsSoporte: countComments(rows, 'commentSoporte'),
+        commentsPlataforma: countComments(rows, 'commentPlataforma'),
+      };
+    }
+
+    function renderCharts(stats) {
+      const opts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { color: '#8b8b98' } } },
+        scales: {
+          x: { ticks: { color: '#8b8b98' }, grid: { color: '#2a2a32' } },
+          y: { ticks: { color: '#8b8b98' }, grid: { color: '#2a2a32' }, beginAtZero: true }
+        }
+      };
+      const data = (counts) => RATING_ORDER.map(r => counts[r] || 0);
+      if (chartOb) chartOb.destroy();
+      if (chartSoporte) chartSoporte.destroy();
+      if (chartPlataforma) chartPlataforma.destroy();
+      chartOb = new Chart(document.getElementById('chartOb'), {
+        type: 'bar',
+        data: { labels: RATING_ORDER, datasets: [{ label: 'Respuestas', data: data(stats.ob.counts), backgroundColor: PALETTE, borderWidth: 0 }] },
+        options: { ...opts, indexAxis: 'y' }
+      });
+      chartSoporte = new Chart(document.getElementById('chartSoporte'), {
+        type: 'bar',
+        data: { labels: RATING_ORDER, datasets: [{ label: 'Respuestas', data: data(stats.soporte.counts), backgroundColor: PALETTE, borderWidth: 0 }] },
+        options: { ...opts, indexAxis: 'y' }
+      });
+      chartPlataforma = new Chart(document.getElementById('chartPlataforma'), {
+        type: 'bar',
+        data: { labels: RATING_ORDER, datasets: [{ label: 'Respuestas', data: data(stats.plataforma.counts), backgroundColor: PALETTE, borderWidth: 0 }] },
+        options: { ...opts, indexAxis: 'y' }
+      });
+    }
+
+    function renderChartsCX(stats) {
+      const opts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { color: '#8b8b98' } } },
+        scales: {
+          x: { ticks: { color: '#8b8b98' }, grid: { color: '#2a2a32' } },
+          y: { ticks: { color: '#8b8b98' }, grid: { color: '#2a2a32' }, beginAtZero: true }
+        }
+      };
+      const data = (counts) => RATING_ORDER.map(r => counts[r] || 0);
+      if (chartObCX) chartObCX.destroy();
+      if (chartSoporteCX) chartSoporteCX.destroy();
+      if (chartPlataformaCX) chartPlataformaCX.destroy();
+      chartObCX = new Chart(document.getElementById('chartObCX'), {
+        type: 'bar',
+        data: { labels: RATING_ORDER, datasets: [{ label: 'Respuestas', data: data(stats.ob.counts), backgroundColor: PALETTE, borderWidth: 0 }] },
+        options: { ...opts, indexAxis: 'y' }
+      });
+      chartSoporteCX = new Chart(document.getElementById('chartSoporteCX'), {
+        type: 'bar',
+        data: { labels: RATING_ORDER, datasets: [{ label: 'Respuestas', data: data(stats.soporte.counts), backgroundColor: PALETTE, borderWidth: 0 }] },
+        options: { ...opts, indexAxis: 'y' }
+      });
+      chartPlataformaCX = new Chart(document.getElementById('chartPlataformaCX'), {
+        type: 'bar',
+        data: { labels: RATING_ORDER, datasets: [{ label: 'Respuestas', data: data(stats.plataforma.counts), backgroundColor: PALETTE, borderWidth: 0 }] },
+        options: { ...opts, indexAxis: 'y' }
+      });
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => { b.classList.toggle('active', b.dataset.tab === tabId); });
+      document.querySelectorAll('.tab-panel').forEach(p => { p.classList.toggle('active', p.id === 'panel-' + tabId); });
+    }
+
+    function renderKpis(stats) {
+      const kpi = document.getElementById('kpiRow');
+      const cards = [
+        { title: 'Onboarding y Success', p: stats.ob.pred },
+        { title: 'Soporte', p: stats.soporte.pred },
+        { title: 'Plataforma', p: stats.plataforma.pred },
+      ];
+      kpi.innerHTML = cards.map(c => `
+        <div class="kpi-card">
+          <h3>${c.title}</h3>
+          <div class="value">${c.p.label}</div>
+          <div class="meta">${c.p.count} respuestas (${c.p.pct}%) · Nivel predominante</div>
+        </div>
+      `).join('');
+    }
+
+    function renderInsights(stats) {
+      const block = document.getElementById('insightsBlock');
+      block.innerHTML = `
+        <h2>Resumen de comentarios</h2>
+        <div class="insight-grid">
+          <div class="insight-block">
+            <h4>Onboarding / Success (${stats.commentsOb} comentarios)</h4>
+            <ul>
+              <li class="positive">Equipo muy valorado (nombres y trato)</li>
+              <li class="positive">Llamadas de seguimiento y acompañamiento</li>
+              <li class="negative">Demoras en respuestas y seguimiento</li>
+              <li class="negative">Falta de avance en necesidades específicas</li>
+            </ul>
+          </div>
+          <div class="insight-block">
+            <h4>Soporte (${stats.commentsSoporte} comentarios)</h4>
+            <ul>
+              <li class="positive">Rapidez cuando responden</li>
+              <li class="positive">Buena actitud y comunicación</li>
+              <li class="negative">Tiempos de respuesta lentos</li>
+              <li class="negative">Falta de cierre (no avisan cuando resuelven)</li>
+            </ul>
+          </div>
+          <div class="insight-block">
+            <h4>Plataforma (${stats.commentsPlataforma} comentarios)</h4>
+            <ul>
+              <li class="positive">Útil, intuitiva y automatiza procesos</li>
+              <li class="positive">Comunicación y formularios digitales</li>
+              <li class="negative">Módulos por madurar y customización</li>
+              <li class="negative">Estabilidad y notificaciones</li>
+            </ul>
+          </div>
+        </div>
+      `;
+    }
+
+    function showLoading(show) {
+      document.getElementById('loading').style.display = show ? 'block' : 'none';
+      document.getElementById('btnRefresh').disabled = show;
+    }
+
+    function showError(msg) {
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error').textContent = msg || 'Error al cargar los datos';
+      document.getElementById('content').style.display = 'none';
+    }
+
+    function showContent() {
+      document.getElementById('error').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+    }
+
+    async function loadData() {
+      showLoading(true);
+      document.getElementById('error').style.display = 'none';
+      try {
+        const res = await fetch('/api/csat');
+        const data = await res.json();
+        if (!res.ok) {
+          showError(data.error || 'Error al obtener datos');
+          return;
+        }
+        const rows = data.rows || [];
+        if (rows.length === 0) {
+          showError('La query no devolvió filas.');
+          return;
+        }
+        const stats = buildStats(rows);
+        document.getElementById('subtitle').textContent = `Administradores · ${stats.n} respuestas · Datos en vivo desde Redash`;
+        renderKpis(stats);
+        renderCharts(stats);
+        renderChartsCX(stats);
+        renderInsights(stats);
+        showContent();
+      } catch (e) {
+        showError(e.message || 'Error de conexión. ¿Está corriendo el servidor (python server.py)?');
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    document.body.addEventListener('click', (e) => {
+      if (e.target.classList.contains('tab-btn')) switchTab(e.target.dataset.tab);
+    });
+    loadData();
+  </script>
+</body>
+</html>

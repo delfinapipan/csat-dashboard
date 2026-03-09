@@ -1,0 +1,14 @@
+# Render – Blueprint para el Dashboard CSAT
+# Conectar el repo y usar este blueprint, o crear un Web Service a mano con los mismos valores.
+
+services:
+  - type: web
+    name: csat-dashboard
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 1 -b 0.0.0.0:$PORT server:app
+    envVars:
+      - key: REDASH_URL
+        sync: false
+      - key: REDASH_API_KEY
+        sync: false
